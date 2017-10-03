@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    id="cordova-bixolon"
+    version="1.0.0">
+
+    <name>BixolonPrint</name>
+    <description>Printing on Bixolon print.</description>
+    <license>Apache 2.0</license>
+    <keywords>cordova,bixolonprint</keywords>
+
+    <author>Arthur SPITZNAGEL</author>
+
+    <engines>
+        <engine name="cordova" version=">=3.0.0" />
+    </engines>
+
+    <js-module src="www/bixolonprint.js" name="BixolonPrint">
+        <clobbers target="BixolonPrint" />
+    </js-module>
+
+    <asset src="www/bixolonprint.js" target="bixolonprint.js" />
+
+    <!-- android -->
+    <platform name="android">
+
+        <dependency id="cordova-plugin-android-support-v4"/>
+
+        <source-file src="src/android/BixolonPrint.java" target-dir="src/cordova/plugins/bixolonprint" />
+
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="BixolonPrint">
+                <param name="android-package" value="it.alfonsovinti.cordova.plugins.bixolonprint.BixolonPrint" />
+            </feature>
+        </config-file>
+
+        <config-file target="AndroidManifest.xml" parent="/manifest">
+            <uses-permission android:name="android.permission.BLUETOOTH"/>
+            <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+            <uses-permission android:name="android.permission.INTERNET"/>
+            <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+            <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+            <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+            <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
+            <uses-permission android:name="android.permission.WAKE_LOCK"/>
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
+            <uses-feature android:name="android.hardware.bluetooth" android:required="false"/>
+            <uses-feature android:name="android.hardware.wifi" android:required="false"/>
+            <uses-feature android:name="android.hardware.usb.host" android:required="false"/>
+        </config-file>
+
+        <source-file src="src/android/libs/Bxlprint.jar" target-dir="libs" framework="true"/>
+    </platform>
+
+</plugin>
