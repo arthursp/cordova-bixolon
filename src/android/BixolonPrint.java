@@ -11,7 +11,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.bixolon.printer.BixolonPrinter;
 import com.bixolon.android.library.BxlService;
 
 import android.annotation.SuppressLint;
@@ -148,11 +147,12 @@ public class BixolonPrint extends CordovaPlugin {
 
         if (ACTION_PRINT_TEXT.equals(this.lastActionName)) {
             this.printText();
-        } else if (ACTION_PRINT_BITMAP_WITH_BASE64.equals(this.lastActionName)) {
-            this.printBitmapWithBase64();
-        } else if (ACTION_GET_STATUS.equals(this.lastActionName)) {
-            this.getStatus();
         }
+        // } else if (ACTION_PRINT_BITMAP_WITH_BASE64.equals(this.lastActionName)) {
+        //     this.printBitmapWithBase64();
+        // } else if (ACTION_GET_STATUS.equals(this.lastActionName)) {
+        //     this.getStatus();
+        // }
 
         Log.d(TAG, "BixolonPrint.onConnect_END");
     }
@@ -262,7 +262,7 @@ public class BixolonPrint extends CordovaPlugin {
                 textAttribute = this.getAttribute(fontType, fontStyle);
                 textSize = this.getTextSize(width, height);
 
-                mBxlService.printText(text + "\r\n", textAlignment, textAttribute, textSize);
+                mBxlService.PrintText(text + "\r\n", textAlignment, textAttribute, textSize);
 
             } catch (JSONException e2) {
                 this.isValidAction = false;
@@ -273,7 +273,7 @@ public class BixolonPrint extends CordovaPlugin {
         }
 
 
-        mBxlService.lineFeed(lineFeed);
+        mBxlService.LineFeed(lineFeed);
         Log.d(TAG, "BixolonPrint.printText_END");
 
         this.onPrintComplete();
