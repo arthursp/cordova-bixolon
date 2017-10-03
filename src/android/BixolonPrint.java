@@ -1,3 +1,5 @@
+package lu.post.cordova.plugins.bixolonprint;
+
 import java.util.Map;
 import java.util.HashMap;
 //import java.util.Queue;
