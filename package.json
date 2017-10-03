@@ -1,6 +1,6 @@
 {
   "name": "cordova-bixolon",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Printing on Bixolon print.",
   "cordova": {
     "id": "cordova-bixolon",

@@ -5,6 +5,7 @@ import java.util.HashMap;
 //import java.util.Queue;
 import java.util.Set;
 
+import 	java.io.FileOutputStream;
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
@@ -18,6 +19,7 @@ import com.bixolon.android.library.BxlService;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothAdapter;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -27,10 +29,13 @@ import android.graphics.BitmapFactory;
 import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
+import android.content.Context;
 
 public class BixolonPrint extends CordovaPlugin {
 
     private static final String TAG = "BixolonPrint";
+
+    BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
     // Action to execute
     public static final String ACTION_PRINT_BITMAP_WITH_BASE64 = "printBitmapWithBase64";
@@ -47,6 +52,7 @@ public class BixolonPrint extends CordovaPlugin {
     public static final String FONT_B = "B";
 
     private CallbackContext cbContext;
+    private Context ctx;
     private String lastActionName;
     private JSONArray lastActionArgs;
     private String actionSuccess;
@@ -65,6 +71,9 @@ public class BixolonPrint extends CordovaPlugin {
 
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
+
+        this.ctx = this.cordova.getActivity().getApplicationContext();
+
         Log.d(TAG, "BixolonPrint.initialize_START");
 
         super.initialize(cordova, webView);
@@ -134,11 +143,45 @@ public class BixolonPrint extends CordovaPlugin {
 
     private void connect() {
         Log.d(TAG, "BixolonPrint.connect_START");
+
         if (this.mIsConnected) {
+            Log.d(TAG, "ok");
             this.onConnect();
-        }else if (mBxlService.Connect() == 0) {
-            this.onConnect();
+        } else {
+
+            try {
+
+                Log.d(TAG, "ok");
+
+                Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+                final String[] itemsAddr = new String[pairedDevices.size()];
+                final String[] itemsName = new String[pairedDevices.size()];
+
+                if (pairedDevices.size() > 0) {
+                    // There are paired devices. Get the name and address of each paired device.
+                    int index = 0;
+                    for (BluetoothDevice device : pairedDevices) {
+                        itemsAddr[index] = device.getAddress();
+                        itemsName[index] = device.getName();
+                        index++;
+                    }
+
+                    mConnectedDeviceAddress = itemsAddr[0];
+
+                    Log.d(TAG, mConnectedDeviceAddress);
+
+                    if (mBxlService.Connect(mConnectedDeviceAddress) == 0) {
+                        this.onConnect();
+                    }else{
+                        this.onDisconnect();
+                    }
+                }
+
+            }catch(Exception e){
+                Log.d(TAG, e.getMessage());
+            }
         }
+
         Log.d(TAG, "BixolonPrint.connect_END");
     }
 
@@ -149,12 +192,9 @@ public class BixolonPrint extends CordovaPlugin {
 
         if (ACTION_PRINT_TEXT.equals(this.lastActionName)) {
             this.printText();
+        } else if (ACTION_PRINT_BITMAP_WITH_BASE64.equals(this.lastActionName)) {
+             this.printBitmapWithBase64();
         }
-        // } else if (ACTION_PRINT_BITMAP_WITH_BASE64.equals(this.lastActionName)) {
-        //     this.printBitmapWithBase64();
-        // } else if (ACTION_GET_STATUS.equals(this.lastActionName)) {
-        //     this.getStatus();
-        // }
 
         Log.d(TAG, "BixolonPrint.onConnect_END");
     }
@@ -176,7 +216,7 @@ public class BixolonPrint extends CordovaPlugin {
         JSONObject status = this.mConnectedDeviceStatus;
 
         if (!this.mIsConnected && this.isValidAction) {
-            this.cbContext.error("Connection failed DEB");
+            this.cbContext.error("Connection failed");
             return;
         }
 
@@ -207,6 +247,7 @@ public class BixolonPrint extends CordovaPlugin {
 
     private void onPrintComplete() {
         Log.d(TAG, "BixolonPrint.onPrintComplete_START");
+        this.actionSuccess = "print success";
         this.disconnect();
         Log.d(TAG, "BixolonPrint.onPrintComplete_END");
     }
@@ -279,6 +320,67 @@ public class BixolonPrint extends CordovaPlugin {
         Log.d(TAG, "BixolonPrint.printText_END");
 
         this.onPrintComplete();
+    }
+
+    private void printBitmapWithBase64() {
+
+        Log.d(TAG, "BixolonPrint.printImage_START");
+
+        FileOutputStream fos = null;
+
+        try {
+
+            JSONObject printConfig;
+            boolean formFeed;
+            int lineFeed;
+
+            printConfig = this.lastActionArgs.getJSONObject(1);
+            formFeed = printConfig.getBoolean("formFeed");
+            lineFeed = printConfig.getInt("lineFeed");
+
+            String base64EncodedData = this.lastActionArgs.getString(0);
+
+            if (base64EncodedData != null) {
+
+                Log.d(TAG, this.ctx.getFilesDir().toString());
+
+                fos = this.ctx.openFileOutput("toPrint.png", Context.MODE_PRIVATE);
+                byte[] decodedString = android.util.Base64.decode(base64EncodedData, android.util.Base64.DEFAULT);
+                fos.write(decodedString);
+                fos.flush();
+                fos.close();
+            }
+
+            mBxlService.PrintImage(this.ctx.getFilesDir().toString()+"/toPrint.png", -1, 1, 50);
+            mBxlService.LineFeed(lineFeed);
+
+            Log.d(TAG, "BixolonPrint.printImage_END");
+
+            this.onPrintComplete();
+
+        } catch (Exception e) {
+            this.isValidAction = false;
+            this.actionError = "print error: " + e.getMessage();
+            this.disconnect();
+            return;
+        } finally {
+            if (fos != null) {
+                fos = null;
+            }
+        }
+    }
+
+    /**
+     * base 64로 encoding 된 image data을 받아서 bitmap을 생성하고 리턴합니다
+     *
+     * @param base64EncodedData
+     *            얻고자 하는 image url
+     * @return 생성된 bitmap
+     */
+    private Bitmap getDecodedBitmap(String base64EncodedData) {
+
+        byte[] imageAtBytes = Base64.decode(base64EncodedData.getBytes(), Base64.DEFAULT);
+        return BitmapFactory.decodeByteArray(imageAtBytes, 0, imageAtBytes.length);
     }
 
      /*         METODI ACCESSORI
@@ -405,4 +507,27 @@ public class BixolonPrint extends CordovaPlugin {
 
         return size;
     }
+
+    private Handler mHandler = new Handler() {
+		public void handleMessage(Message msg) {
+			Log.d(TAG, String.valueOf(msg.what));
+			if (msg.what == BxlService.BXL_STS_COVEROPEN) {
+                Log.d(TAG, "Cover is open.");
+//			} else if (msg.what == BxlService.BXL_STS_DRAWER_LOW) {
+//				buffer.append("Drawer kick-out connector pin 3 is LOW.\n");
+//			} else if (msg.what == BxlService.BXL_STS_DRAWER_HIGH) {
+//				buffer.append("Drawer kick-out connector pin 3 is HIGH.\n");
+			} else if (msg.what == BxlService.BXL_STS_MECHANICAL_ERROR) {
+                Log.d(TAG, "Mechanical error.");
+			} else if (msg.what == BxlService.BXL_STS_AUTO_CUTTER_ERROR) {
+                Log.d(TAG, "Auto cutter error occurred.");
+			} else if (msg.what == BxlService.BXL_STS_ERROR) {
+                Log.d(TAG, "Unrecoverable error.");
+			} else if (msg.what == BxlService.BXL_STS_PAPER_NEAR_END) {
+                Log.d(TAG, "Paper near end sensor: paper near end.");
+			} else if (msg.what == BxlService.BXL_STS_NO_PAPER) {
+                Log.d(TAG, "Paper end sensor: no paper present.");
+			}
+		}
+	};
 }
