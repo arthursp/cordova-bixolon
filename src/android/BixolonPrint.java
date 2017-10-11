@@ -151,26 +151,35 @@ public class BixolonPrint extends CordovaPlugin {
 
             try {
 
+                JSONObject printConfig = this.lastActionArgs.getJSONObject(1);
+
+                String printerName = printConfig.getString("printerName");
+
                 Log.d(TAG, "ok");
 
                 Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
-                final String[] itemsAddr = new String[pairedDevices.size()];
-                final String[] itemsName = new String[pairedDevices.size()];
+                final String itemsAddr;
+                final String itemsName;
 
                 if (pairedDevices.size() > 0) {
                     // There are paired devices. Get the name and address of each paired device.
                     int index = 0;
                     for (BluetoothDevice device : pairedDevices) {
-                        itemsAddr[index] = device.getAddress();
-                        itemsName[index] = device.getName();
-                        index++;
-                    }
 
-                    mConnectedDeviceAddress = itemsAddr[0];
+                        if(printerName.equals(device.getName())){
+                            Log.d(TAG, device.getAddress()+" "+device.getName());
+                            mConnectedDeviceAddress = device.getAddress();
+                            break;
+                        }
+                    }
 
                     Log.d(TAG, mConnectedDeviceAddress);
 
-                    if (mBxlService.Connect(mConnectedDeviceAddress) == 0) {
+                    int result = mBxlService.Connect(mConnectedDeviceAddress);
+
+                    Log.d(TAG, "result : "+result);
+
+                    if (result == 0) {
                         this.onConnect();
                     }else{
                         this.onDisconnect();
